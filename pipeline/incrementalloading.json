@@ -299,6 +299,35 @@
 						}
 					]
 				}
+			},
+			{
+				"name": "Web1",
+				"type": "WebActivity",
+				"dependsOn": [
+					{
+						"activity": "loop",
+						"dependencyConditions": [
+							"Succeeded",
+							"Failed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"method": "POST",
+					"url": "https://prod-26.canadacentral.logic.azure.com:443/workflows/b3e3c2ea31574df38a6099bee913591b/triggers/When_an_HTTP_request_is_received/paths/invoke?api-version=2016-10-01&sp=%2Ftriggers%2FWhen_an_HTTP_request_is_received%2Frun&sv=1.0&sig=oD0pD2D3BY-zbnN-oPciDRBXL0fRoMVi_rDFZwlvHXI",
+					"body": {
+						"value": "{\n    \"pipeline_name\": @{pipeline().Pipeline},\n    \"pipeline_runId\":@{pipeline().RunId}\n\n}",
+						"type": "Expression"
+					}
+				}
 			}
 		],
 		"parameters": {
