@@ -8,7 +8,11 @@
 				"dependsOn": [],
 				"userProperties": [],
 				"typeProperties": {
-					"isSequential": false,
+					"items": {
+						"value": "@pipeline().parameters.loop_table",
+						"type": "Expression"
+					},
+					"isSequential": true,
 					"activities": [
 						{
 							"name": "sqltolake",
@@ -303,22 +307,22 @@
 				"defaultValue": [
 					{
 						"schema": "dbo",
-						"table": "DimUser",
+						"table": "dimuser",
 						"col_name": "updated_at"
 					},
 					{
 						"schema": "dbo",
-						"table": "DimTrack",
+						"table": "dimtrack",
 						"col_name": "updated_at"
 					},
 					{
 						"schema": "dbo",
-						"table": "DimDate",
+						"table": "dimdate",
 						"col_name": "date"
 					},
 					{
 						"schema": "dbo",
-						"table": "DimArtist",
+						"table": "dimartist",
 						"col_name": "updated_at"
 					},
 					{
