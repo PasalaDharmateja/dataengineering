@@ -137,8 +137,8 @@
 				}
 			},
 			{
-				"name": "update_latest_cdc",
-				"type": "Copy",
+				"name": "Ifincrementalloading",
+				"type": "IfCondition",
 				"dependsOn": [
 					{
 						"activity": "sqltolake",
@@ -147,55 +147,104 @@
 						]
 					}
 				],
-				"policy": {
-					"timeout": "0.12:00:00",
-					"retry": 0,
-					"retryIntervalInSeconds": 30,
-					"secureOutput": false,
-					"secureInput": false
-				},
 				"userProperties": [],
 				"typeProperties": {
-					"source": {
-						"type": "AzureSqlSource",
-						"sqlReaderQuery": {
-							"value": "SELECT CONVERT(date, MAX(@{pipeline().parameters.col_name})) AS cdc FROM @{pipeline().parameters.schema}.@{pipeline().parameters.table}",
-							"type": "Expression"
-						},
-						"queryTimeout": "02:00:00",
-						"partitionOption": "None"
+					"expression": {
+						"value": "@greater(activity('cdc').outputdataRead,0)",
+						"type": "Expression"
 					},
-					"sink": {
-						"type": "JsonSink",
-						"storeSettings": {
-							"type": "AzureBlobFSWriteSettings"
-						},
-						"formatSettings": {
-							"type": "JsonWriteSettings"
-						}
-					},
-					"enableStaging": false
-				},
-				"inputs": [
-					{
-						"referenceName": "AzureSqlTable1",
-						"type": "DatasetReference"
-					}
-				],
-				"outputs": [
-					{
-						"referenceName": "Json1",
-						"type": "DatasetReference",
-						"parameters": {
-							"container": "bromze",
-							"directory": {
-								"value": "@concat(pipeline().parameters.table,'_cdc')",
-								"type": "Expression"
+					"ifFalseActivities": [
+						{
+							"name": "Deletesqltolakefile",
+							"type": "Delete",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
 							},
-							"filename": "cdc.json"
+							"userProperties": [],
+							"typeProperties": {
+								"dataset": {
+									"referenceName": "Parquet1",
+									"type": "DatasetReference",
+									"parameters": {
+										"container": "bronze",
+										"directory": {
+											"value": "@pipeline().parameters.table",
+											"type": "Expression"
+										},
+										"file_name": "@concat(pipeline().parameters.table,'_',variables('currentdate'))"
+									}
+								},
+								"enableLogging": false,
+								"storeSettings": {
+									"type": "AzureBlobFSReadSettings",
+									"recursive": true,
+									"enablePartitionDiscovery": false
+								}
+							}
 						}
-					}
-				]
+					],
+					"ifTrueActivities": [
+						{
+							"name": "update_latest_cdc",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "AzureSqlSource",
+									"sqlReaderQuery": {
+										"value": "SELECT  MAX(@{pipeline().parameters.col_name}) AS cdc FROM @{pipeline().parameters.schema}.@{pipeline().parameters.table}",
+										"type": "Expression"
+									},
+									"queryTimeout": "02:00:00",
+									"partitionOption": "None"
+								},
+								"sink": {
+									"type": "JsonSink",
+									"storeSettings": {
+										"type": "AzureBlobFSWriteSettings"
+									},
+									"formatSettings": {
+										"type": "JsonWriteSettings"
+									}
+								},
+								"enableStaging": false
+							},
+							"inputs": [
+								{
+									"referenceName": "AzureSqlTable1",
+									"type": "DatasetReference"
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "Json1",
+									"type": "DatasetReference",
+									"parameters": {
+										"container": "bronze",
+										"directory": {
+											"value": "@concat(pipeline().parameters.table,'_cdc')",
+											"type": "Expression"
+										},
+										"filename": "cdc.json"
+									}
+								}
+							]
+						}
+					]
+				}
 			}
 		],
 		"parameters": {
