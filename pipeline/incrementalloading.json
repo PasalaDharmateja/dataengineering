@@ -67,7 +67,10 @@
 						"referenceName": "Parquet1",
 						"type": "DatasetReference",
 						"parameters": {
-							"container": "bronze",
+							"container": {
+								"value": "@variables('container')",
+								"type": "Expression"
+							},
 							"directory": {
 								"value": "@pipeline().parameters.table",
 								"type": "Expression"
@@ -100,7 +103,14 @@
 			{
 				"name": "cdc",
 				"type": "Lookup",
-				"dependsOn": [],
+				"dependsOn": [
+					{
+						"activity": "container",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
 				"policy": {
 					"timeout": "0.12:00:00",
 					"retry": 0,
@@ -125,7 +135,10 @@
 						"referenceName": "Json1",
 						"type": "DatasetReference",
 						"parameters": {
-							"container": "bronze",
+							"container": {
+								"value": "@variables('container')",
+								"type": "Expression"
+							},
 							"directory": {
 								"value": "@concat(pipeline().parameters.table,'_cdc')",
 								"type": "Expression"
@@ -150,7 +163,7 @@
 				"userProperties": [],
 				"typeProperties": {
 					"expression": {
-						"value": "@greater(activity('cdc').outputdataRead,0)",
+						"value": "@greater(activity('sqltolake').output.dataRead,0)",
 						"type": "Expression"
 					},
 					"ifFalseActivities": [
@@ -171,7 +184,10 @@
 									"referenceName": "Parquet1",
 									"type": "DatasetReference",
 									"parameters": {
-										"container": "bronze",
+										"container": {
+											"value": "@variables('container')",
+											"type": "Expression"
+										},
 										"directory": {
 											"value": "@pipeline().parameters.table",
 											"type": "Expression"
@@ -233,7 +249,10 @@
 									"referenceName": "Json1",
 									"type": "DatasetReference",
 									"parameters": {
-										"container": "bronze",
+										"container": {
+											"value": "@variables('container')",
+											"type": "Expression"
+										},
 										"directory": {
 											"value": "@concat(pipeline().parameters.table,'_cdc')",
 											"type": "Expression"
@@ -244,6 +263,23 @@
 							]
 						}
 					]
+				}
+			},
+			{
+				"name": "container",
+				"type": "SetVariable",
+				"dependsOn": [],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "container",
+					"value": {
+						"value": "bronze",
+						"type": "Expression"
+					}
 				}
 			}
 		],
@@ -260,6 +296,9 @@
 		},
 		"variables": {
 			"currentdate": {
+				"type": "String"
+			},
+			"container": {
 				"type": "String"
 			}
 		},
