@@ -11,6 +11,12 @@
 						"dependencyConditions": [
 							"Succeeded"
 						]
+					},
+					{
+						"activity": "cdc",
+						"dependencyConditions": [
+							"Succeeded"
+						]
 					}
 				],
 				"policy": {
@@ -25,7 +31,7 @@
 					"source": {
 						"type": "AzureSqlSource",
 						"sqlReaderQuery": {
-							"value": "select * from @{pipeline().parameters.schema}.@{pipeline().parameters.table} where @{pipeline().parameters.col_name} >'1900-01-01'",
+							"value": "@concat(\n  'SELECT * FROM [', pipeline().parameters.schema, '].[', pipeline().parameters.table,\n  '] WHERE ', pipeline().parameters.col_name, ' > ''',\n  formatDateTime(\n    coalesce(activity('cdc').output.value[0].cdc, '1900-01-01'),\n    'yyyy-MM-dd HH:mm:ss'\n  ),\n  ''''\n)",
 							"type": "Expression"
 						},
 						"queryTimeout": "02:00:00",
@@ -90,6 +96,106 @@
 						"type": "Expression"
 					}
 				}
+			},
+			{
+				"name": "cdc",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "JsonSource",
+						"storeSettings": {
+							"type": "AzureBlobFSReadSettings",
+							"recursive": true,
+							"enablePartitionDiscovery": false
+						},
+						"formatSettings": {
+							"type": "JsonReadSettings"
+						}
+					},
+					"dataset": {
+						"referenceName": "Json1",
+						"type": "DatasetReference",
+						"parameters": {
+							"container": "bronze",
+							"directory": {
+								"value": "@concat(pipeline().parameters.table,'_cdc')",
+								"type": "Expression"
+							},
+							"filename": "cdc.json"
+						}
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "update_latest_cdc",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "sqltolake",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": {
+							"value": "SELECT CONVERT(date, MAX(@{pipeline().parameters.col_name})) AS cdc FROM @{pipeline().parameters.schema}.@{pipeline().parameters.table}",
+							"type": "Expression"
+						},
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"sink": {
+						"type": "JsonSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings"
+						},
+						"formatSettings": {
+							"type": "JsonWriteSettings"
+						}
+					},
+					"enableStaging": false
+				},
+				"inputs": [
+					{
+						"referenceName": "AzureSqlTable1",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "Json1",
+						"type": "DatasetReference",
+						"parameters": {
+							"container": "bromze",
+							"directory": {
+								"value": "@concat(pipeline().parameters.table,'_cdc')",
+								"type": "Expression"
+							},
+							"filename": "cdc.json"
+						}
+					}
+				]
 			}
 		],
 		"parameters": {
